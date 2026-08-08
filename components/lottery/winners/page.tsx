@@ -159,6 +159,30 @@ export default function Winners() {
     });
     const winnerTicketCount = winnerTicketCountData ? Number(winnerTicketCountData) : 0;
 
+    // Read current user ticket count
+    const { data: currentUserTicketCountData, refetch: refetchCurrentUserTicket } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "getUserTicketCount",
+        args: queryRoundId && address ? ([BigInt(queryRoundId), queryPoolId - 1, address] as any) : undefined,
+        query: {
+            enabled: !!queryRoundId && !!address,
+        }
+    });
+    const currentUserTicketCount = currentUserTicketCountData ? Number(currentUserTicketCountData) : 0;
+
+    // Read if user claimed refund
+    const { data: refundClaimedData, refetch: refetchRefundClaimed } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "refundClaimed",
+        args: queryRoundId && address ? [BigInt(queryRoundId), queryPoolId - 1, address] : undefined,
+        query: {
+            enabled: !!queryRoundId && !!address,
+        }
+    });
+    const isRefundClaimed = !!refundClaimedData;
+
     // Read Round Status for Hero
     const { data: roundStatusData, refetch: refetchRoundStatus } = useReadContract({
         address: CONTRACT_ADDRESS,
@@ -248,15 +272,15 @@ export default function Winners() {
     const currentUserAllocation =
         isConnected && address
             ? allocationsList.find(
-                  (alloc) => alloc.winner.toLowerCase() === address.toLowerCase()
-              )
+                (alloc) => alloc.winner.toLowerCase() === address.toLowerCase()
+            )
             : undefined;
 
     const currentUserRankIndex =
         isConnected && address
             ? allocationsList.findIndex(
-                  (alloc) => alloc.winner.toLowerCase() === address.toLowerCase()
-              )
+                (alloc) => alloc.winner.toLowerCase() === address.toLowerCase()
+            )
             : -1;
 
     const displayPrizeVal = currentUserAllocation
@@ -396,6 +420,8 @@ export default function Winners() {
         refetchRoundStatus();
         refetchUserPendingPayout();
         refetchWinnerPendingPayout();
+        refetchCurrentUserTicket();
+        refetchRefundClaimed();
         fetchHistoryEvents();
     };
 
@@ -651,15 +677,22 @@ export default function Winners() {
                                     This round was cancelled because fewer than 5 participants entered. All participants have been refunded.
                                 </p>
                                 <div className="mt-12 flex justify-center gap-4">
-                                    <button className="rounded-xl border border-red-500/30 bg-red-500/10 px-10 py-5 text-lg font-bold text-red-300">
-                                        Refunded ✓
-                                    </button>
-                                    {isConnected && winnerTicketCount > 0 && (
-                                        <button
-                                            onClick={handleClaimRefund}
-                                            className="rounded-xl bg-[#F5B73C] px-10 py-5 text-lg font-bold text-[#241A06] transition hover:bg-[#FFC95E]"
-                                        >
-                                            Claim Refund
+                                    {isConnected && currentUserTicketCount > 0 ? (
+                                        isRefundClaimed ? (
+                                            <button className="rounded-xl border border-red-500/30 bg-red-500/10 px-10 py-5 text-lg font-bold text-red-300">
+                                                Refunded ✓
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={handleClaimRefund}
+                                                className="rounded-xl bg-[#F5B73C] hover:bg-[#FFC95E] px-10 py-5 text-lg font-bold text-[#241A06] transition"
+                                            >
+                                                Claim Refund
+                                            </button>
+                                        )
+                                    ) : (
+                                        <button className="rounded-xl border border-red-500/30 bg-red-500/10 px-10 py-5 text-lg font-bold text-red-300">
+                                            Refunded ✓
                                         </button>
                                     )}
                                 </div>
@@ -667,7 +700,7 @@ export default function Winners() {
                         ) : (
                             <>
                                 <h1 className="mt-8 font-['Bricolage_Grotesque'] text-6xl font-extrabold tracking-[-0.05em] text-white md:text-8xl">
-                                    {isCurrentUserWinner 
+                                    {isCurrentUserWinner
                                         ? (currentUserRankIndex === 0 ? "You won the jackpot" : `You won Rank #${currentUserRankIndex + 1} prize`)
                                         : "Jackpot Winner"}
                                 </h1>

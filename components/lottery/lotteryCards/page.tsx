@@ -177,7 +177,7 @@ export default function LotteryCards() {
 
     useEffect(() => {
         if (!pools) return;
-        
+
         const checkAndTriggerBackendFinalize = async () => {
             let hasExpired = false;
             for (let i = 0; i < pools.length; i++) {
