@@ -1,38 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWalletProtection } from "@/providers/WalletProtectionProvider";
-import { useWriteContract, useReadContract } from "wagmi";
+import { useWriteContract, useReadContract, usePublicClient, useWatchContractEvent } from "wagmi";
 import { formatEther } from "viem";
 import { CONTRACT_ADDRESS, CONTRACT_ABI, mstTestnet } from "@/config/contract";
 
-const recentEntries = [
-    {
-        wallet: "0x91c4…8ab2",
-        tickets: 5,
-        code: "MOONBOY",
-        time: "2m ago",
-    },
-    {
-        wallet: "0x4f7e…11d0",
-        tickets: 1,
-        code: "—",
-        time: "4m ago",
-    },
-    {
-        wallet: "0xbb02…59f1",
-        tickets: 12,
-        code: "SIXPACK",
-        time: "6m ago",
-    },
-    {
-        wallet: "0x2d18…c73a",
-        tickets: 2,
-        code: "LUCKY7",
-        time: "9m ago",
-    },
-];
+
 
 const draws = [
     {
@@ -97,7 +72,84 @@ export default function Jackpot() {
         address: CONTRACT_ADDRESS,
         abi: CONTRACT_ABI,
         functionName: "getCurrentPoolInfo",
-        args: [BigInt(poolId - 1)],
+        args: [poolId - 1],
+    });
+
+    const publicClient = usePublicClient();
+    const [recentEntriesList, setRecentEntriesList] = useState<any[]>([]);
+
+    const fetchRecentEntries = useCallback(async () => {
+        if (!publicClient || !poolInfo) return;
+        try {
+            const currentRoundId = poolInfo[0];
+            const logs = await publicClient.getContractEvents({
+                address: CONTRACT_ADDRESS,
+                abi: CONTRACT_ABI,
+                eventName: "Entered",
+                args: {
+                    drawType: poolId - 1,
+                },
+                fromBlock: BigInt(0),
+            });
+
+            // Process the last 10 logs (newest first)
+            const mapped = await Promise.all(
+                logs.reverse().slice(0, 10).map(async (log: any) => {
+                    const player = log.args.player;
+                    const quantity = log.args.quantity ? Number(log.args.quantity) : 0;
+                    const roundVal = Number(log.args.roundId);
+                    const statusStr = roundVal === Number(currentRoundId) ? "Active" : "Inactive";
+
+                    let timeStr = "recently";
+                    try {
+                        const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+                        const blockTimestamp = Number(block.timestamp) * 1000;
+                        const diffMs = Date.now() - blockTimestamp;
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHrs = Math.floor(diffMins / 60);
+                        if (diffMins < 1) {
+                            timeStr = "Just now";
+                        } else if (diffMins < 60) {
+                            timeStr = `${diffMins}m ago`;
+                        } else if (diffHrs < 24) {
+                            timeStr = `${diffHrs}h ago`;
+                        } else {
+                            timeStr = `${Math.floor(diffHrs / 24)}d ago`;
+                        }
+                    } catch (e) {
+                        console.error("Error fetching block time:", e);
+                    }
+
+                    return {
+                        wallet: player ? `${player.slice(0, 6)}…${player.slice(-4)}` : "Unknown",
+                        tickets: quantity,
+                        round: roundVal,
+                        status: statusStr,
+                        time: timeStr,
+                    };
+                })
+            );
+
+            setRecentEntriesList(mapped);
+        } catch (error) {
+            console.error("Error fetching recent entries:", error);
+        }
+    }, [publicClient, poolInfo, poolId]);
+
+    useEffect(() => {
+        if (poolInfo) {
+            fetchRecentEntries();
+        }
+    }, [poolInfo, fetchRecentEntries]);
+
+    useWatchContractEvent({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        eventName: "Entered",
+        onLogs() {
+            refetchPoolInfo();
+            fetchRecentEntries();
+        },
     });
 
     const liveEntries = poolInfo ? Number(poolInfo[1]) : currentDraw.entries;
@@ -107,7 +159,7 @@ export default function Jackpot() {
         ? `$${Number(formatEther(poolInfo[6]))}`
         : currentDraw.jackpot;
 
-    const currentPrizePoolVal = poolInfo ? poolInfo[7] : 0n;
+    const currentPrizePoolVal = poolInfo ? poolInfo[7] : BigInt(0);
     const currentPrizePoolDisplay = poolInfo
         ? `$${Number(formatEther(currentPrizePoolVal))}`
         : "$0";
@@ -135,6 +187,7 @@ export default function Jackpot() {
             });
             setTimeout(() => {
                 refetchPoolInfo();
+                fetchRecentEntries();
             }, 2000);
         } catch (err) {
             console.warn("Referral registration request was rejected or failed:", err);
@@ -161,6 +214,7 @@ export default function Jackpot() {
             });
             setTimeout(() => {
                 refetchPoolInfo();
+                fetchRecentEntries();
             }, 2000);
         } catch (err) {
             console.warn("Draw entry transaction request was rejected or failed:", err);
@@ -299,13 +353,15 @@ export default function Jackpot() {
 
                         {/* Header */}
 
-                        <div className="grid grid-cols-[1.4fr_1fr_1fr_.8fr] bg-[#1C1626] px-3 sm:px-4 py-[11px] font-mono text-[9.5px] sm:text-[10.5px] tracking-[0.1em] text-white/40">
+                        <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr_0.9fr] bg-[#1C1626] px-3 sm:px-4 py-[11px] font-mono text-[9.5px] sm:text-[10.5px] tracking-[0.1em] text-white/40">
 
                             <span>WALLET</span>
 
                             <span>TICKETS</span>
 
-                            <span>VIA CODE</span>
+                            <span>ROUND</span>
+
+                            <span>STATUS</span>
 
                             <span className="text-right">
                                 TIME
@@ -315,38 +371,44 @@ export default function Jackpot() {
 
                         {/* Rows */}
 
-                        {recentEntries.map((entry) => (
-
-                            <div
-                                key={entry.wallet}
-                                className="grid grid-cols-[1.4fr_1fr_1fr_.8fr] border-t border-white/[0.05] bg-[#1C1626] px-3 sm:px-4 py-[13px] font-mono text-[12px] sm:text-[13px] text-white/75"
-                            >
-
-                                <span>
-                                    {entry.wallet}
-                                </span>
-
-                                <span>
-                                    {entry.tickets}
-                                </span>
-
-                                <span
-                                    className={
-                                        entry.code === "—"
-                                            ? "text-white/30"
-                                            : "text-[#FF5DB1]"
-                                    }
-                                >
-                                    {entry.code}
-                                </span>
-
-                                <span className="text-right text-white/40">
-                                    {entry.time}
-                                </span>
-
+                        {recentEntriesList.length === 0 ? (
+                            <div className="text-center py-8 text-white/40 font-mono text-[13px] border-t border-white/[0.05]">
+                                No entries recorded yet.
                             </div>
+                        ) : (
+                            recentEntriesList.map((entry, idx) => (
+                                <div
+                                    key={`${entry.wallet}-${idx}`}
+                                    className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr_0.9fr] border-t border-white/[0.05] bg-[#1C1626] px-3 sm:px-4 py-[13px] font-mono text-[12px] sm:text-[13px] text-white/75"
+                                >
+                                    <span>
+                                        {entry.wallet}
+                                    </span>
 
-                        ))}
+                                    <span>
+                                        {entry.tickets}
+                                    </span>
+
+                                    <span>
+                                        #{entry.round}
+                                    </span>
+
+                                    <span
+                                        className={
+                                            entry.status === "Active"
+                                                ? "text-[#C9F24A] font-semibold"
+                                                : "text-white/30"
+                                        }
+                                    >
+                                        {entry.status}
+                                    </span>
+
+                                    <span className="text-right text-white/40">
+                                        {entry.time}
+                                    </span>
+                                </div>
+                            ))
+                        )}
 
                     </div>
 

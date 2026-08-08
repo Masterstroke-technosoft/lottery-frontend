@@ -10,6 +10,7 @@ import { Menu, X } from "lucide-react";
 
 const navItems = [
     { name: "Draws", href: "/lottery" },
+    { name: "Winners", href: "/winners" },
     { name: "My Tickets", href: "/ticket" },
     { name: "Referrals", href: "/referral" },
     { name: "Leaderboard", href: "/leaderboard" },
@@ -93,7 +94,7 @@ export default function Navbar() {
                                     key={item.name}
                                     href={item.href}
                                     onClick={(e) => {
-                                        if (item.href !== "/lottery" && !isConnected) {
+                                        if (item.href !== "/lottery" && item.href !== "/winners" && !isConnected) {
                                             e.preventDefault();
                                             showToast("Please connect your wallet first to continue.");
                                         }
@@ -165,7 +166,7 @@ export default function Navbar() {
                                         href={item.href}
                                         onClick={(e) => {
                                             setIsMenuOpen(false);
-                                            if (item.href !== "/lottery" && !isConnected) {
+                                            if (item.href !== "/lottery" && item.href !== "/winners" && !isConnected) {
                                                 e.preventDefault();
                                                 showToast("Please connect your wallet first to continue.");
                                             }

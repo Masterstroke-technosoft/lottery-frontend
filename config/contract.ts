@@ -21,7 +21,7 @@ export const mstTestnet: Chain = {
     },
 };
 
-export const CONTRACT_ADDRESS = "0xeAe47462b8E05f6B8a42DA069c930b392AbB7C37" as const;
+export const CONTRACT_ADDRESS = "0xBc859962e760454B5e0b684991f0E80501e180eb" as const;
 
 export const CONTRACT_ABI = [
     {
@@ -91,6 +91,31 @@ export const CONTRACT_ABI = [
         "name": "enterDraw",
         "outputs": [],
         "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "roundId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "drawType",
+                "type": "uint8"
+            }
+        ],
+        "name": "finalizeDraw",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "finalizeRound",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -177,6 +202,11 @@ export const CONTRACT_ABI = [
     },
     {
         "inputs": [],
+        "name": "OwnershipRenounceDisabled",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "ReentrancyGuardReentrantCall",
         "type": "error"
     },
@@ -208,6 +238,22 @@ export const CONTRACT_ABI = [
     {
         "inputs": [],
         "name": "RoundNotRefundable",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint8",
+                "name": "bits",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "SafeCastOverflowedUintDowncast",
         "type": "error"
     },
     {
@@ -251,31 +297,6 @@ export const CONTRACT_ABI = [
         ],
         "name": "Entered",
         "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "roundId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint8",
-                "name": "drawType",
-                "type": "uint8"
-            }
-        ],
-        "name": "finalizeDraw",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "finalizeRound",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
     },
     {
         "anonymous": false,
@@ -567,13 +588,6 @@ export const CONTRACT_ABI = [
             }
         ],
         "name": "registerReferral",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -1469,6 +1483,47 @@ export const CONTRACT_ABI = [
                 "type": "uint8"
             }
         ],
+        "name": "getWinnerAllocations",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "winner",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "allocatedPrize",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "pendingPayout",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct LotteryTestString.WinnerAllocation[]",
+                "name": "allocations",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "roundId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "drawType",
+                "type": "uint8"
+            }
+        ],
         "name": "getWinners",
         "outputs": [
             {
@@ -1863,6 +1918,13 @@ export const CONTRACT_ABI = [
     },
     {
         "inputs": [],
+        "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "roundExpiryPeriod",
         "outputs": [
             {
@@ -2152,4 +2214,4 @@ export const CONTRACT_ABI = [
         "stateMutability": "view",
         "type": "function"
     }
-] as const;
+] as const; 
