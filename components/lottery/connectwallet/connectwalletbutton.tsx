@@ -2,7 +2,7 @@
 
 import { useAccount, useDisconnect, useConnect } from "wagmi";
 import { LogOut } from "lucide-react";
-
+import { useEffect } from "react";
 export default function ConnectWalletButton() {
     const { isConnected, address } = useAccount();
     const { disconnect } = useDisconnect();
@@ -11,6 +11,35 @@ export default function ConnectWalletButton() {
     const injected = connectors.find(
         (connector) => connector.id === "injected"
     );
+
+    useEffect(() => {
+        if (!isConnected || !address) return;
+
+        const generateReferralCode = async () => {
+            try {
+                const response = await fetch(
+                    "/api/referral/generate",    // still we have to change here api currently its demo
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            walletAddress: address,
+                        }),
+                    }
+                );
+
+                const data = await response.json();
+
+                console.log("Referral Code:", data.referralCode);
+            } catch (error) {
+                console.error("Failed to generate referral code:", error);
+            }
+        };
+
+        generateReferralCode();
+    }, [isConnected, address]);
 
     return (
         <>

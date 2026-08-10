@@ -552,7 +552,7 @@ export default function Winners() {
                 const res = await fetch("/api/finalize", { method: "POST" });
                 const data = await res.json();
                 if (data.success) {
-                    alert("Round finalized successfully via backend!");
+                    alert("Round finalized successfully!");
                     refetchAllWinnersData();
                 } else {
                     console.error("Backend finalization failed:", data.error);
